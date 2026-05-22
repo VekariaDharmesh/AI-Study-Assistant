@@ -1,0 +1,125 @@
+// Prisma schema blueprint for Aura Study
+// To swap to a live production database, modify the datasource provider to "postgresql" and set the DATABASE_URL environment string.
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String             @id @default(uuid())
+  name           String
+  email          String             @unique
+  passwordHash   String?            // Nullable for OAuth/Demo access
+  level          Int                @default(1)
+  xp             Int                @default(0)
+  totalXp        Int                @default(0)
+  streak         Int                @default(1)
+  lastActiveDate DateTime           @default(now())
+  avatar         String             @default("⚡")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  
+  // Relations
+  subjects       Subject[]
+  notes          Note[]
+  quizzes        Quiz[]
+  tasks          Task[]
+  pomodoros      PomodoroSession[]
+}
+
+model Subject {
+  id             String             @id @default(uuid())
+  name           String
+  icon           String             // Lucide icon name string e.g. "BrainCircuit"
+  color          String             // Hex color code e.g. "#6366f1"
+  xp             Int                @default(0)
+  
+  // Relations
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes          Note[]
+  flashcards     Flashcard[]
+  quizzes        Quiz[]
+  tasks          Task[]
+  pomodoros      PomodoroSession[]
+}
+
+model Note {
+  id             String             @id @default(uuid())
+  title          String
+  content        String
+  type           String             // "pdf" | "doc" | "voice"
+  summary        String?            // AI generated bullets summary
+  revisionSheet  String?            // AI generated markdown guide
+  date           DateTime           @default(now())
+  
+  // Relations
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  flashcards     Flashcard[]
+}
+
+model Flashcard {
+  id             String             @id @default(uuid())
+  front          String
+  back           String
+  box            Int                @default(1) // Spaced box 1-5
+  nextReviewDate DateTime           @default(now())
+  
+  // Relations
+  subjectId      String
+  subject        Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  noteId         String?
+  note           Note?              @relation(fields: [noteId], references: [id], onDelete: SetNull)
+}
+
+model Quiz {
+  id             String             @id @default(uuid())
+  title          String
+  score          Int
+  totalQuestions Int
+  xpEarned       Int                @default(0)
+  date           DateTime           @default(now())
+  
+  // Relations
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id                 String         @id @default(uuid())
+  title              String
+  dueDate            DateTime
+  estimatedPomodoros Int            @default(2)
+  completedPomodoros Int            @default(0)
+  completed          Boolean        @default(false)
+  xpEarned           Int            @default(0)
+  
+  // Relations
+  userId             String
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId          String
+  subject            Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+}
+
+model PomodoroSession {
+  id             String             @id @default(uuid())
+  duration       Int                // Focused time in minutes
+  date           DateTime           @default(now())
+  type           String             // "focus" | "short_break" | "long_break"
+  
+  // Relations
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId      String?
+  subject        Subject?           @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+}
